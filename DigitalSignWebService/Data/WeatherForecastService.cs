@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DefaultBlazor.Server.Data
+namespace DigitalSignWebService.Data
 {
     public class WeatherForecastService
     {

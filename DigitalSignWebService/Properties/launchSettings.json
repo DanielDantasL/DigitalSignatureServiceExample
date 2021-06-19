@@ -15,7 +15,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "DefaultBlazor.Server": {
+    "DigitalSignWebService": {
       "commandName": "Project",
       "dotnetRunMessages": "true",
       "launchBrowser": true,

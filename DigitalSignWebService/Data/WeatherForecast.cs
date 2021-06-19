@@ -1,6 +1,6 @@
 using System;
 
-namespace DefaultBlazor.Server.Data
+namespace DigitalSignWebService.Data
 {
     public class WeatherForecast
     {

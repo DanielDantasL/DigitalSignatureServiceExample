@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
-using System.Text.Unicode;
 
-namespace DigitalSignatureService.Shared {
+namespace DigitalSignWebService.Data {
     public static class CryptoUtils {
         public enum KeySize {
             Bits515  = 515,

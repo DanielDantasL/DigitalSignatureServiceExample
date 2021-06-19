@@ -2,11 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RootNamespace>DefaultBlazor.Server</RootNamespace>
+    <RootNamespace>DigitalSignWebService</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="5.0.13" />
+    <PackageReference Include="Tewr.Blazor.FileReader" Version="3.1.0.21158" />
+    <PackageReference Include="BlazorDownloadFile" Version="2.1.6" />
   </ItemGroup>
 
 </Project>
