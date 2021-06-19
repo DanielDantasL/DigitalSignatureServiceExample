@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DigitalSignatureServiceWebApi", "DigitalSignatureServiceWebApi\DigitalSignatureServiceWebApi.csproj", "{43E43437-818D-4121-9F02-527377D761BA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DigitalSignatureServiceWebApi", "DigitalSignatureServiceWebApi\DigitalSignatureServiceWebApi.csproj", "{43E43437-818D-4121-9F02-527377D761BA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DigitalSignatureServiceClient", "DigitalSignatureServiceClient\DigitalSignatureServiceClient.csproj", "{1B83CF9E-09DA-46E1-8885-D7C1A4CEB384}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{43E43437-818D-4121-9F02-527377D761BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{43E43437-818D-4121-9F02-527377D761BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{43E43437-818D-4121-9F02-527377D761BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B83CF9E-09DA-46E1-8885-D7C1A4CEB384}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B83CF9E-09DA-46E1-8885-D7C1A4CEB384}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B83CF9E-09DA-46E1-8885-D7C1A4CEB384}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B83CF9E-09DA-46E1-8885-D7C1A4CEB384}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
