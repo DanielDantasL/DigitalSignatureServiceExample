@@ -82,7 +82,7 @@
     }
 
     private void Verify(CryptoUtils.IVerifiableFile file) {
-        CryptoUtils.VerifySignature(file);
+        // CryptoUtils.VerifySignature(file);
     }
 
     private void AttachFileSignature(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
@@ -99,7 +99,7 @@
 
     private void AttachCertificate(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
         if (e.File.ContentType == "application/x-x509-ca-cert") {
-    // .der file
+            // .cert / .der file
             var certFile = e.File;
             var certData = new byte[certFile.Size];
             certFile.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);

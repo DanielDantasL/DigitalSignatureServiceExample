@@ -159,24 +159,6 @@ namespace DigitalSignWebService.Data {
             }
         }
         
-        public static byte[] SignFile(ISignableFile file, AsymmetricKeyParameter privateKey) {
-            var signer = SignerUtilities.GetSigner(file.GetSignatureAlgorithm());
-            signer.Init(forSigning: true, privateKey);
-        
-            var fileData = file.GetFileData();
-        
-            // TODO: sign and return signature
-            return null;
-        }
-        
-        public static bool VerifySignature(IVerifiableFile file) {
-            // TODO: implement signature verification
-            var verified = file.IsSigned;
-            
-            file.SetVerified(verified);
-            return file.WasVerified;
-        }
-        
         private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm)
         {
             switch (algorithm)

@@ -1,6 +1,8 @@
 ﻿@page "/sign"
 @using Org.BouncyCastle.Crypto
 @using DigitalSignWebService.Data
+@using Org.BouncyCastle.OpenSsl
+@using System.IO
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
     <MudText Typo="Typo.h3" GutterBottom="true">Upload and Sign Files</MudText>
@@ -37,7 +39,7 @@
                                 </MudSelect>
                             </MudItem>
                             <MudItem xs="2">
-                                <InputFile id="privateKeyFile" OnChange="() => SignFileWithKey(signableFile, null)" hidden multiple/>
+                                <InputFile id="privateKeyFile" OnChange="@((args) => SignFileWithKey(args, signableFile))" hidden multiple/>
                                 <MudButton HtmlTag="label"
                                            Variant="Variant.Filled"
                                            Color="Color.Secondary"
@@ -77,6 +79,33 @@
 
     private void SignFileWithKey(CryptoUtils.ISignableFile file, AsymmetricKeyParameter privateKey) {
     // TODO: store signature to be downloaded
-        var signature = CryptoUtils.SignFile(file, privateKey);
+        // var signature = CryptoUtils.SignFile(file, privateKey);
+    }
+
+    private void SignFileWithKey(InputFileChangeEventArgs e, CryptoUtils.BrowserSignableFile file) {
+        if (e.File.ContentType == "application/x-pem-file") {
+            // .pem file
+            var certFile = e.File;
+            var certData = new byte[certFile.Size];
+            certFile.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);
+
+            // var reader = new StringReader();
+            // TextReader tr = new StreamReader(Path);
+            // PemReader pr = new PemReader(tr);
+            // AsymmetricKeyParameter Key = (AsymmetricKeyParameter)pr.ReadObject();
+            // pr.Reader.Close();
+            // tr.Close();
+            // return Key;
+            
+            // var pemReader = new PemReader();
+            // pemReader.ReadPemObject().
+            // TODO: read file with PemReader
+            // -> CryptoUtils.SignFile()
+            // file.SetSignature
+            
+            
+            // file.SetSignature(); 
+            // BlazorDownloadFileService.DownloadFileFromText(fileName, GetPrivateKey(), contentType: "application/x-pem-file", encoderShouldEmitUTF8Identifier: false);
+        }
     }
 }
