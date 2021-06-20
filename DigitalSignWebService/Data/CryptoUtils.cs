@@ -1,7 +1,21 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
+using System.Security.Cryptography.X509Certificates;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.Pkcs;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Operators;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Prng;
+using Org.BouncyCastle.Math;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Utilities;
+using Org.BouncyCastle.X509;
 
 namespace DigitalSignWebService.Data {
     public static class CryptoUtils {
@@ -10,8 +24,96 @@ namespace DigitalSignWebService.Data {
             Bits1024 = 1024,
         }
 
-        public enum KeyGenAlgorithm {
+        public enum AsymmetricKeyGenAlgorithm {
             RSA = 1,
+        }
+
+        public static X509Certificate2 GenerateSelfSignedCertificate(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, string subjectName, out PrivateKeyInfo privateKeyInfo) {
+            // Generating Random Numbers
+            var randomGenerator = new CryptoApiRandomGenerator();
+            var random          = new SecureRandom(randomGenerator);
+
+            // Keypair Generator
+            var kpGenerator = GetAsymmetricKeyPairGenerator(algorithm, keyStrength, random);
+
+            // Create a keypair
+            var subjectKeyPair = kpGenerator.GenerateKeyPair();
+
+            return GenerateCertificate(subjectKeyPair, subjectName, subjectName, subjectKeyPair.Private, random, out privateKeyInfo);
+        }
+
+        public static X509Certificate2 GenerateCertificate(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, string subjectName, string issuerName, AsymmetricKeyParameter issuerPrivateKey, SecureRandom random, out PrivateKeyInfo privateKeyInfo) {
+            // Random number generator
+            random ??= new SecureRandom(new CryptoApiRandomGenerator());
+
+            // Keypair Generator
+            var kpGenerator = GetAsymmetricKeyPairGenerator(algorithm, keyStrength, random);
+
+            // Create a keypair
+            var subjectKeyPair = kpGenerator.GenerateKeyPair();
+
+            return GenerateCertificate(subjectKeyPair, subjectName, issuerName, issuerPrivateKey, random, out privateKeyInfo);
+        }
+
+        public static X509Certificate2 GenerateCertificate(AsymmetricCipherKeyPair subjectKeyPair, string subjectName, string issuerName, AsymmetricKeyParameter issuerPrivateKey, SecureRandom random, out PrivateKeyInfo privateKeyInfo) {
+            // Random number generator
+            random ??= new SecureRandom(new CryptoApiRandomGenerator());
+
+            // Signature Factory
+            var issuerSignFactory = GetSignatureFactory(issuerPrivateKey, random);
+
+            // Certificate Generator
+            var certificateGenerator = new X509V3CertificateGenerator();
+
+            // Serial Number
+            certificateGenerator.SetSerialNumber(BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(Int64.MaxValue), random));
+
+            // Issuer and Subject Names
+            certificateGenerator.SetSubjectDN(new X509Name(subjectName));
+            certificateGenerator.SetIssuerDN(new X509Name(issuerName));
+
+            // Valid For
+            var notBefore = DateTime.UtcNow.Date;
+            var notAfter  = notBefore.AddYears(2);
+
+            certificateGenerator.SetNotBefore(notBefore);
+            certificateGenerator.SetNotAfter(notAfter);
+
+            certificateGenerator.SetPublicKey(subjectKeyPair.Public);
+
+            // Sign certificate
+            var certificate = certificateGenerator.Generate(issuerSignFactory);
+
+            // Corresponding private key
+            privateKeyInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(subjectKeyPair.Private);
+
+            // Merge into X509Certificate2
+            return new X509Certificate2(certificate.GetEncoded());
+        }
+
+        private static IAsymmetricCipherKeyPairGenerator GetAsymmetricKeyPairGenerator(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, SecureRandom random) {
+            IAsymmetricCipherKeyPairGenerator kpGenerator;
+
+            // TODO: support different algorithms
+
+            switch (algorithm) {
+                case AsymmetricKeyGenAlgorithm.RSA:
+                    kpGenerator = new RsaKeyPairGenerator();
+                    break;
+
+                default: return null;
+            }
+
+            random ??= new SecureRandom(new CryptoApiRandomGenerator());
+            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
+
+            kpGenerator.Init(keyGenerationParameters);
+            return kpGenerator;
+        }
+
+        private static ISignatureFactory GetSignatureFactory(AsymmetricKeyParameter privateKey, SecureRandom random) {
+            // TODO: support different algorithms?
+            return new Asn1SignatureFactory("SHA512WITHRSA", privateKey, random);
         }
 
         public static void ExportPublicKey(RSA rsa, TextWriter outputStream) {
