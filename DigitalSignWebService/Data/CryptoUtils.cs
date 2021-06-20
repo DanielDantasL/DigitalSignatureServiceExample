@@ -67,9 +67,13 @@ namespace DigitalSignWebService.Data {
 
         public static bool Verify(IBrowserFile file, byte[] expected, SignatureAlgorithm algorithm, AsymmetricKeyParameter publicKey)
         {
-            var produced = SignFile(file, algorithm, publicKey);
+            var fileData = ReadFile(file);
 
             var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
+
+            signer.Init(false, publicKey);
+
+            signer.BlockUpdate(fileData, 0, fileData.Length);
 
             return signer.VerifySignature(expected);
         }
