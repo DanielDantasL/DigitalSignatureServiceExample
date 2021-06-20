@@ -1,6 +1,8 @@
 ﻿@page "/genKeys"
 @using BlazorDownloadFile
 @using DigitalSignWebService.Data
+@using System.Security.Cryptography
+@using System.IO
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
     <MudText Typo="Typo.h3" GutterBottom="true">Generate Keys</MudText>
@@ -38,55 +40,63 @@
             </MudCard>
         </MudItem>
         <MudItem xs="6" sm="6" md="4">
-                    <MudCard>
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">Private Key</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudText>@PrivateKey</MudText>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(PrivateKey)" @onclick="() => SaveTextInFile(PrivateKey, PrivateKeyFileName)">Save</MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Private Key</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>@PrivateKey</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(PrivateKey)" @onclick="() => SaveTextInFile(PrivateKey, PrivateKeyFileName)">Save</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
     </MudGrid>
 </MudContainer>
 
 @code {
-        private const string KeygenFailedMessage = "Failed to generate Key!";
         private const string PublicKeyFileName = "public-key.txt";
         private const string PrivateKeyFileName = "private-key.txt";
 
-    private CryptoUtils.KeySize KeySize { get; set; } = CryptoUtils.KeySize.Bits515;
+    private CryptoUtils.KeySize KeySize { get; set; } = CryptoUtils.KeySize.Bits512;
     private CryptoUtils.KeyGenAlgorithm KeyGenAlgorithm { get; set; } = CryptoUtils.KeyGenAlgorithm.RSA;
 
     private string PublicKey { get; set; }
     private string PrivateKey { get; set; }
-    [Inject] IBlazorDownloadFileService BlazorDownloadFileService { get; set; }
+
+    [Inject]
+    IBlazorDownloadFileService BlazorDownloadFileService { get; set; }
+
+    private RSA _rsa;
 
     private void GenerateKeyPair() {
-        if (CryptoUtils.TryGenerateKeyPair(KeyGenAlgorithm, KeySize, out var publicKeyK, out var privateKey)) {
-            PublicKey = publicKeyK;
-            PrivateKey = privateKey;
-        } else {
-            PublicKey = publicKeyK;
-            PrivateKey = privateKey;
+        try {
+            _rsa = RSA.Create((int) KeySize);
+        } catch (Exception e) {
+            Console.WriteLine(e);
+            return;
         }
+
+        var stringWriter = new StringWriter();
+
+        // write public key
+        CryptoUtils.ExportPublicKey(_rsa, stringWriter);
+        PublicKey = stringWriter.ToString();
+
+        // reset writer
+        stringWriter.GetStringBuilder().Length = 0;
+
+        CryptoUtils.ExportPrivateKey(_rsa, stringWriter);
+        PrivateKey = stringWriter.ToString();
     }
 
     private void SaveTextInFile(string content, string fileName) {
         BlazorDownloadFileService.DownloadFileFromText(fileName, content, contentType: "text/plain", encoderShouldEmitUTF8Identifier: false);
     }
 
-    private readonly Func<CryptoUtils.KeySize, string> _keySizeToString = ks => {
-        return ks switch {
-            CryptoUtils.KeySize.Bits515  => "515 Bits",
-            CryptoUtils.KeySize.Bits1024 => "1024 Bits",
-            _                            => nameof(ks)
-            };
-    };
+    private readonly Func<CryptoUtils.KeySize, string> _keySizeToString = ks => $"{(int) ks} Bits";
 
 }
