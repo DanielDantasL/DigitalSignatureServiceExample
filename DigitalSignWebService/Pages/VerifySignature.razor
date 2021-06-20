@@ -1,0 +1,110 @@
+﻿@page "/verify"
+@using DigitalSignWebService.Data
+@using System.Security.Cryptography.X509Certificates
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudText Typo="Typo.h3" GutterBottom="true">Verify Signature</MudText>
+    <MudGrid Class="my-2">
+        <MudItem xs="6" sm="6" md="12">
+            <InputFile id="fileInput" OnChange="UploadFiles" hidden multiple/>
+
+            <MudButton HtmlTag="label"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Filled.CloudUpload"
+                       for="fileInput">
+                Upload Files
+            </MudButton>
+        </MudItem>
+        <MudItem xs="6" sm="6" md="12">
+            @if (files != null) {
+                <MudText Typo="@Typo.h6">@files.Count() File@(files.Count() == 1 ? "" : "s"):</MudText>
+                <MudList>
+                    @for (int i = 0; i < files.Count; i++) {
+                        var currentI = i;
+                        var verifiableFile = files[i];
+                        <MudGrid Class="my-2">
+                            <MudItem xs="3">
+                                <MudListItem Icon="@Icons.Filled.AttachFile" @key="@verifiableFile">
+                                    @verifiableFile.File.Name <br>
+                                    (<code>@(verifiableFile.File.Size / 1024) KBytes</code>)
+                                </MudListItem>
+                            </MudItem>
+
+                            <MudItem xs="2">
+                                <InputFile id=@($"signatureInputFile{currentI}") OnChange="@((args) => AttachFileSignature(args, verifiableFile))" hidden accept=".der"/>
+                                <MudButton HtmlTag="label"
+                                           Variant="Variant.Filled"
+                                           Color=@(verifiableFile.SignatureFile == null ? Color.Secondary : Color.Tertiary)
+                                           StartIcon="@Icons.Filled.HistoryEdu"
+                                           for=@($"signatureInputFile{currentI}")>
+                                    @(verifiableFile.SignatureFile == null ? "Upload Signature" : "Change Signature")
+                                </MudButton>
+                            </MudItem>
+
+                            <MudItem xs="2">
+                                <InputFile id=@($"certificate{currentI}") OnChange="@((args) => AttachCertificate(args, verifiableFile))" hidden accept=".der"/>
+                                <MudButton HtmlTag="label"
+                                           Variant="Variant.Filled"
+                                           Color=@(verifiableFile.GetCertificate() == null ? Color.Secondary : Color.Tertiary)
+                                           StartIcon="@Icons.Filled.FactCheck"
+                                           for=@($"certificate{currentI}")>
+                                    @(verifiableFile.GetCertificate() == null ? "Upload Certificate" : "Change Certificate")
+                                </MudButton>
+                            </MudItem>
+
+                            <MudItem xs="2">
+                                <MudButton HtmlTag="label"
+                                           Variant="Variant.Filled"
+                                           Color=@(verifiableFile.WasVerified ? verifiableFile.VerificationResult ? Color.Success : Color.Error : Color.Primary)
+                                           StartIcon=@(verifiableFile.WasVerified ? verifiableFile.VerificationResult ? Icons.Filled.Check : Icons.Filled.Error : Icons.Filled.Search)
+                                           OnClick="@((args) => Verify(verifiableFile))">
+                                    @* @(verifiableFile.WasVerified ?"Verify") *@
+                                    Verify
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    }
+                </MudList>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code
+{
+    IList<CryptoUtils.BrowserVerifiableFile> files = new List<CryptoUtils.BrowserVerifiableFile>();
+
+    private void UploadFiles(InputFileChangeEventArgs e) {
+        foreach (var file in e.GetMultipleFiles()) {
+            files.Add(new CryptoUtils.BrowserVerifiableFile(file));
+        }
+    }
+
+    private void Verify(CryptoUtils.IVerifiableFile file) {
+        // CryptoUtils.VerifySignature(file);
+    }
+
+    private void AttachFileSignature(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
+        if (e.File.ContentType == "application/x-x509-ca-cert") {
+    // .der file
+            var signatureFile = e.File;
+            var signatureData = new byte[signatureFile.Size];
+            signatureFile.OpenReadStream().ReadAsync(signatureData, 0, (int) signatureFile.Size);
+
+            file.SignatureFile = signatureFile;
+            file.SetSignature(signatureData);
+        }
+    }
+
+    private void AttachCertificate(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
+        if (e.File.ContentType == "application/x-x509-ca-cert") {
+            // .cert / .der file
+            var certFile = e.File;
+            var certData = new byte[certFile.Size];
+            certFile.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);
+
+            file.SetCertificate(new X509Certificate2(certData));
+        }
+    }
+}
