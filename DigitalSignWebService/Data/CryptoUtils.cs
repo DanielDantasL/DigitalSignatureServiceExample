@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Components.Forms;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Pkcs;
 using Org.BouncyCastle.Asn1.X509;
@@ -26,6 +27,51 @@ namespace DigitalSignWebService.Data {
 
         public enum AsymmetricKeyGenAlgorithm {
             RSA = 1,
+        }
+
+        public enum SignatureAlgorithm
+        {
+            SHA512 = 1,
+        }
+
+        private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm)
+        {
+            switch (algorithm)
+            {
+                case SignatureAlgorithm.SHA512: return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
+                default: throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
+            }
+        }
+
+        private static byte[] ReadFile(IBrowserFile file)
+        {
+            var fileData = new byte[file.Size];
+            file.OpenReadStream().ReadAsync(fileData, 0, (int)file.Size);
+
+            return fileData;
+        }
+
+        public static byte[] SignFile(IBrowserFile file, SignatureAlgorithm algorithm, AsymmetricKeyParameter privateKey)
+        {
+            var fileData = ReadFile(file);
+
+            var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
+
+            signer.Init(true, privateKey);
+
+            signer.BlockUpdate(fileData, 0, fileData.Length);
+
+            return signer.GenerateSignature();
+            
+        }
+
+        public static bool Verify(IBrowserFile file, byte[] expected, SignatureAlgorithm algorithm, AsymmetricKeyParameter publicKey)
+        {
+            var produced = SignFile(file, algorithm, publicKey);
+
+            var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
+
+            return signer.VerifySignature(expected);
         }
 
         public static X509Certificate2 GenerateSelfSignedCertificate(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, string subjectName, out PrivateKeyInfo privateKeyInfo) {
@@ -113,7 +159,7 @@ namespace DigitalSignWebService.Data {
 
         private static ISignatureFactory GetSignatureFactory(AsymmetricKeyParameter privateKey, SecureRandom random) {
             // TODO: support different algorithms?
-            return new Asn1SignatureFactory("SHA512WITHRSA", privateKey, random);
+            return new Asn1SignatureFactory("SHA224withRSA", privateKey, random);
         }
 
         public static void ExportPublicKey(RSA rsa, TextWriter outputStream) {
