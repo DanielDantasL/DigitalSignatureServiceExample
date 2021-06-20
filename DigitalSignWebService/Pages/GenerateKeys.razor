@@ -24,7 +24,7 @@
     </MudGrid>
     <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="GenerateKeyPair" Class="my-2">Generate Key Pair</MudButton>
     <MudGrid Class="my-2">
-        <MudItem xs="6" sm="6" md="4">
+        <MudItem xs="6">
             <MudCard>
                 <MudCardHeader>
                     <CardHeaderContent>
@@ -35,11 +35,11 @@
                     <MudText>@PublicKey</MudText>
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(PublicKey)" @onclick="() => SaveTextInFile(PublicKey, PublicKeyFileName)">Save</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@(_rsa == null)" @onclick="() => SaveTextInFile(PublicKey, PublicKeyFileName)">Save</MudButton>
                 </MudCardActions>
             </MudCard>
         </MudItem>
-        <MudItem xs="6" sm="6" md="4">
+        <MudItem xs="6">
             <MudCard>
                 <MudCardHeader>
                     <CardHeaderContent>
@@ -50,7 +50,7 @@
                     <MudText>@PrivateKey</MudText>
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(PrivateKey)" @onclick="() => SaveTextInFile(PrivateKey, PrivateKeyFileName)">Save</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@(_rsa == null)" @onclick="() => SaveTextInFile(PrivateKey, PrivateKeyFileName)">Save</MudButton>
                 </MudCardActions>
             </MudCard>
         </MudItem>
@@ -58,8 +58,8 @@
 </MudContainer>
 
 @code {
-        private const string PublicKeyFileName = "public-key.txt";
-        private const string PrivateKeyFileName = "private-key.txt";
+        private const string PublicKeyFileName = "public-key.pem";
+        private const string PrivateKeyFileName = "private-key.pem";
 
     private CryptoUtils.KeySize KeySize { get; set; } = CryptoUtils.KeySize.Bits512;
     private CryptoUtils.KeyGenAlgorithm KeyGenAlgorithm { get; set; } = CryptoUtils.KeyGenAlgorithm.RSA;
