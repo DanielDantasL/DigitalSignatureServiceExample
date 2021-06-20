@@ -17,6 +17,8 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DigitalSignWebService.Data {
     public static class CryptoUtils {
@@ -32,6 +34,12 @@ namespace DigitalSignWebService.Data {
         public enum SignatureAlgorithm
         {
             SHA512 = 1,
+        }
+
+        public class Signature
+        {
+            public SignatureAlgorithm alg { get; set; }
+            public string sign { get; set; }
         }
 
         private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm)
@@ -51,7 +59,16 @@ namespace DigitalSignWebService.Data {
             return fileData;
         }
 
-        public static byte[] SignFile(IBrowserFile file, SignatureAlgorithm algorithm, AsymmetricKeyParameter privateKey)
+        public static X509Certificate2 ImportCert(IBrowserFile file)
+        {
+            var fileData = ReadFile(file);
+            X509Certificate2 certificate = new X509Certificate2();
+            certificate.Import(fileData);
+
+            return certificate;
+        }
+
+        public static string SignFile(IBrowserFile file, SignatureAlgorithm algorithm, AsymmetricKeyParameter privateKey)
         {
             var fileData = ReadFile(file);
 
@@ -61,21 +78,30 @@ namespace DigitalSignWebService.Data {
 
             signer.BlockUpdate(fileData, 0, fileData.Length);
 
-            return signer.GenerateSignature();
-            
+            var signedString = Convert.ToBase64String(signer.GenerateSignature());
+
+            Signature sig = new Signature() { alg = algorithm, sign = signedString };
+
+            return JsonSerializer.Serialize(sig);
         }
 
-        public static bool Verify(IBrowserFile file, byte[] expected, SignatureAlgorithm algorithm, AsymmetricKeyParameter publicKey)
+        public static bool Verify(IBrowserFile file, string expected, X509Certificate2 certificate)
         {
+            AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(certificate.GetPublicKey());
+
+            Signature sig = JsonSerializer.Deserialize<Signature>(expected);
+
             var fileData = ReadFile(file);
 
-            var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
+            var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(sig.alg));
 
             signer.Init(false, publicKey);
 
             signer.BlockUpdate(fileData, 0, fileData.Length);
 
-            return signer.VerifySignature(expected);
+            var expectedSig = Convert.FromBase64String(sig.sign);
+
+            return signer.VerifySignature(expectedSig);
         }
 
         public static X509Certificate2 GenerateSelfSignedCertificate(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, string subjectName, out PrivateKeyInfo privateKeyInfo) {
