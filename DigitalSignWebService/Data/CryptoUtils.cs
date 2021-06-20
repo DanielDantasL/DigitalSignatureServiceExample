@@ -34,6 +34,149 @@ namespace DigitalSignWebService.Data {
             SHA512 = 1,
         }
 
+        public interface ISignableFile {
+            public byte[] GetFileData();
+            public string GetSignatureAlgorithm();
+            public byte[] GetSignature();
+            public void   SetSignature(byte[] signature);
+            public bool   IsSigned { get; }
+        }
+
+        public interface IVerifiableFile {
+            public byte[]           GetFileData();
+            public string           GetSignatureAlgorithm();
+            public void             SetSignature(byte[] signature);
+            public bool             IsSigned { get; }
+            public X509Certificate2 GetCertificate();
+            public void             SetCertificate(X509Certificate2 cert);
+            public void             SetVerified(bool                verified);
+            public bool             WasVerified { get; }
+        }
+
+        public class BrowserSignableFile : ISignableFile {
+            public IBrowserFile       File;
+            public SignatureAlgorithm SignatureAlgorithm;
+
+            private byte[] _signature = null;
+            public  bool   IsSigned => _signature != null;
+
+            private BrowserSignableFile() {
+            }
+
+            public BrowserSignableFile(IBrowserFile file, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
+                File               = file;
+                SignatureAlgorithm = algorithm;
+            }
+
+            public byte[] GetFileData() {
+                if (File == null) {
+                    return null;
+                }
+
+                var fileData = new byte[File.Size];
+                File.OpenReadStream().ReadAsync(fileData, 0, (int) File.Size);
+                return fileData;
+            }
+
+            public string GetSignatureAlgorithm() {
+                switch (SignatureAlgorithm) {
+                    case SignatureAlgorithm.SHA512:
+                        return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(SignatureAlgorithm), SignatureAlgorithm, null);
+                }
+            }
+
+            public byte[] GetSignature() {
+                return _signature;
+            }
+
+            public void SetSignature(byte[] signature) {
+                _signature = signature;
+            }
+        }
+
+        public class BrowserVerifiableFile : IVerifiableFile {
+            public  IBrowserFile       File;
+            public  IBrowserFile       SignatureFile;
+            public  SignatureAlgorithm SignatureAlgorithm;
+            private byte[]             _signature;
+            private X509Certificate2   _certificate;
+            private bool               _verified = false;
+
+            public bool VerificationResult;
+
+            public bool IsSigned   => _signature != null;
+            public bool WasVerified => _verified;
+
+            private BrowserVerifiableFile() {
+            }
+
+            public BrowserVerifiableFile(IBrowserFile file, X509Certificate2 certificate = null, byte[] signature = null, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
+                File               = file;
+                SignatureAlgorithm = algorithm;
+                _certificate       = certificate;
+                _signature         = signature;
+            }
+
+            public byte[] GetFileData() {
+                if (File == null) {
+                    return null;
+                }
+
+                var fileData = new byte[File.Size];
+                File.OpenReadStream().ReadAsync(fileData, 0, (int) File.Size);
+                return fileData;
+            }
+
+            public string GetSignatureAlgorithm() {
+                switch (SignatureAlgorithm) {
+                    case SignatureAlgorithm.SHA512:
+                        return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(SignatureAlgorithm), SignatureAlgorithm, null);
+                }
+            }
+
+            public byte[] GetSignature() {
+                return _signature;
+            }
+
+            public void SetSignature(byte[] signature) {
+                _signature = signature;
+            }
+
+            public X509Certificate2 GetCertificate() {
+                return _certificate;
+            }
+
+            public void SetCertificate(X509Certificate2 cert) {
+                _certificate = cert;
+            }
+
+            public void SetVerified(bool verified) {
+                _verified = verified;
+            }
+        }
+        
+        public static byte[] SignFile(ISignableFile file, AsymmetricKeyParameter privateKey) {
+            var signer = SignerUtilities.GetSigner(file.GetSignatureAlgorithm());
+            signer.Init(forSigning: true, privateKey);
+        
+            var fileData = file.GetFileData();
+        
+            // TODO: sign and return signature
+            return null;
+        }
+        
+        public static bool VerifySignature(IVerifiableFile file) {
+            // TODO: implement signature verification
+            var verified = file.IsSigned;
+            
+            file.SetVerified(verified);
+            return file.WasVerified;
+        }
+        
         private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm)
         {
             switch (algorithm)
