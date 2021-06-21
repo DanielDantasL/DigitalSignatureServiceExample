@@ -19,6 +19,7 @@ using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Org.BouncyCastle.Utilities.IO.Pem;
 
 namespace DigitalSignWebService.Data {
     public static class CryptoUtils {
@@ -193,8 +194,14 @@ namespace DigitalSignWebService.Data {
             return certificate;
         }
 
-        public static string SignFile(IBrowserFile file, SignatureAlgorithm algorithm, AsymmetricKeyParameter privateKey)
+        public static string SignFile(IBrowserFile file, IBrowserFile priv_pem_key_file, SignatureAlgorithm algorithm)
         {
+            var priv_pem_key = ReadFile(priv_pem_key_file);
+
+            PemObject pemObject = new PemObject("PRIVATE KEY", priv_pem_key);
+
+            AsymmetricKeyParameter privateKey = PublicKeyFactory.CreateKey(pemObject.Content);
+
             var fileData = ReadFile(file);
 
             var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
