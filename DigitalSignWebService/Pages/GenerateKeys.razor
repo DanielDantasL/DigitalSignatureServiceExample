@@ -1,14 +1,10 @@
 ﻿@page "/genKeys"
 @using BlazorDownloadFile
 @using DigitalSignWebService.Data
-@using System.Security.Cryptography
 @using System.IO
 @using System.Security.Cryptography.X509Certificates
-@using Org.BouncyCastle.Asn1
 @using Org.BouncyCastle.Asn1.Pkcs
-@using Org.BouncyCastle.Crypto
 @using Org.BouncyCastle.Utilities.IO.Pem
-@using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 @using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter
 
 
@@ -38,7 +34,7 @@
                 Variant="Variant.Filled"
                 Color="Color.Primary"
                 Disabled="@(_certificate == null)"
-                StartIcon="@Icons.Filled.FileDownload" 
+                StartIcon="@Icons.Filled.FileDownload"
                 @onclick="() => DownloadCertificate(CertificateFileName)"
                 Class="my-2">
                 Download Certificate
@@ -77,10 +73,8 @@
 
     private void GenerateKeyPair() {
         _certificate = CryptoUtils.GenerateSelfSignedCertificate(AsymmetricKeyGenAlgorithm, (int) KeySize, "CN=DigitalSignSampleSubjectName", out _privateKeyInfo);
-        PublicKeyText = new DerOctetString(_certificate.GetPublicKey()).ToString();
-        PrivateKeyText = GetPrivateKey();
-        // PublicKeyText = _privateKeyInfo.PrivateKeyData.ToString();
-        // PrivateKeyText = _privateKeyInfo.PrivateKeyData.ToString();
+        PublicKeyText = GetPublicKey(_certificate);
+        PrivateKeyText = GetPrivateKey(_privateKeyInfo);
     }
 
     private void SaveTextInFile(string content, string fileName) {
@@ -94,25 +88,33 @@
 
         BlazorDownloadFileService.DownloadFile(fileName, _certificate.RawData, contentType: "application/x-x509-ca-cert");
     }
-    
+
     private void DownloadPrivateKey(string fileName) {
         if (_privateKeyInfo == null) {
             return;
         }
 
-        // BlazorDownloadFileService.DownloadFile(fileName, _privateKeyInfo.ToAsn1Object() .GetDerEncoded(), contentType: "application/x-x509-ca-cert");
-        BlazorDownloadFileService.DownloadFileFromText(fileName, GetPrivateKey(), contentType: "application/x-pem-file", encoderShouldEmitUTF8Identifier: false);
+        BlazorDownloadFileService.DownloadFileFromText(fileName, GetPrivateKey(_privateKeyInfo), contentType: "application/x-pem-file", encoderShouldEmitUTF8Identifier: false);
     }
 
-    private String GetPrivateKey() {
+    private String GetPrivateKey(PrivateKeyInfo privateKeyInfo) {
         TextWriter textWriter = new StringWriter();
         var pemWriter = new PemWriter(textWriter);
-        PemObjectGenerator pemObject = new PemObject("PRIVATE KEY", _privateKeyInfo.GetEncoded());
+        PemObjectGenerator pemObject = new PemObject("PRIVATE KEY", privateKeyInfo.GetEncoded());
         pemWriter.WriteObject(pemObject);
         pemWriter.Writer.Flush();
         return textWriter.ToString();
     }
-    
+
+    private String GetPublicKey(X509Certificate2 certificate) {
+        TextWriter textWriter = new StringWriter();
+        var pemWriter = new PemWriter(textWriter);
+        PemObjectGenerator pemObject = new PemObject("PUBLIC KEY", certificate.GetPublicKey());
+        pemWriter.WriteObject(pemObject);
+        pemWriter.Writer.Flush();
+        return textWriter.ToString();
+    }
+
     private readonly Func<CryptoUtils.KeySize, string> _keySizeToString = ks => $"{(int) ks} Bits";
 
 }
