@@ -1,6 +1,9 @@
 ﻿@page "/verify"
 @using DigitalSignWebService.Data
 @using System.Security.Cryptography.X509Certificates
+@using System.Text
+@using System.Text.Json
+@using System.IO
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
     <MudText Typo="Typo.h3" GutterBottom="true">Verify Signature</MudText>
@@ -32,18 +35,18 @@
                             </MudItem>
 
                             <MudItem xs="2">
-                                <InputFile id=@($"signatureInputFile{currentI}") OnChange="@((args) => AttachFileSignature(args, verifiableFile))" hidden accept=".der"/>
+                                <InputFile id=@($"signatureInputFile{currentI}") OnChange="@(async (args) => await AttachFileSignature(args, verifiableFile))" hidden accept=".json"/>
                                 <MudButton HtmlTag="label"
                                            Variant="Variant.Filled"
-                                           Color=@(verifiableFile.SignatureFile == null ? Color.Secondary : Color.Tertiary)
+                                           Color=@(verifiableFile.GetSignature() == null ? Color.Secondary : Color.Tertiary)
                                            StartIcon="@Icons.Filled.HistoryEdu"
                                            for=@($"signatureInputFile{currentI}")>
-                                    @(verifiableFile.SignatureFile == null ? "Upload Signature" : "Change Signature")
+                                    @(verifiableFile.GetSignature() == null ? "Upload Signature" : "Change Signature")
                                 </MudButton>
                             </MudItem>
 
                             <MudItem xs="2">
-                                <InputFile id=@($"certificate{currentI}") OnChange="@((args) => AttachCertificate(args, verifiableFile))" hidden accept=".der"/>
+                                <InputFile id=@($"certificate{currentI}") OnChange="@(async (args) => await AttachCertificate(args, verifiableFile))" hidden accept=".der"/>
                                 <MudButton HtmlTag="label"
                                            Variant="Variant.Filled"
                                            Color=@(verifiableFile.GetCertificate() == null ? Color.Secondary : Color.Tertiary)
@@ -81,30 +84,23 @@
         }
     }
 
-    private void Verify(CryptoUtils.IVerifiableFile file) {
-        // CryptoUtils.VerifySignature(file);
+    private void Verify(CryptoUtils.BrowserVerifiableFile file) {
+        file.SetVerified(CryptoUtils.Verify(file.File, file.GetSignature(), file.GetCertificate())); 
     }
 
-    private void AttachFileSignature(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
-        if (e.File.ContentType == "application/x-x509-ca-cert") {
-    // .der file
-            var signatureFile = e.File;
-            var signatureData = new byte[signatureFile.Size];
-            signatureFile.OpenReadStream().ReadAsync(signatureData, 0, (int) signatureFile.Size);
+    private async Task AttachFileSignature(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
+        var signatureData = new byte[e.File.Size];
+        await e.File.OpenReadStream().ReadAsync(signatureData, 0, (int) e.File.Size);
 
-            file.SignatureFile = signatureFile;
-            file.SetSignature(signatureData);
-        }
+        file.SetSignature(JsonSerializer.Deserialize<CryptoUtils.Signature>(signatureData));
     }
 
-    private void AttachCertificate(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
-        if (e.File.ContentType == "application/x-x509-ca-cert") {
-            // .cert / .der file
-            var certFile = e.File;
-            var certData = new byte[certFile.Size];
-            certFile.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);
+    private async Task AttachCertificate(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
+    // .cert / .der file
+        var certFile = e.File;
+        var certData = new byte[certFile.Size];
+        await e.File.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);
 
-            file.SetCertificate(new X509Certificate2(certData));
-        }
+        file.SetCertificate(new X509Certificate2(certData));
     }
 }

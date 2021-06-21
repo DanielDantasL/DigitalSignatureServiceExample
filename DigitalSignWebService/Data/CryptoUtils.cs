@@ -57,7 +57,7 @@ namespace DigitalSignWebService.Data {
         public interface IVerifiableFile {
             public byte[]           GetFileData();
             public string           GetSignatureAlgorithm();
-            public void             SetSignature(byte[] signature);
+            public void             SetSignature(Signature signature);
             public bool             IsSigned { get; }
             public X509Certificate2 GetCertificate();
             public void             SetCertificate(X509Certificate2 cert);
@@ -110,21 +110,20 @@ namespace DigitalSignWebService.Data {
 
         public class BrowserVerifiableFile : IVerifiableFile {
             public  IBrowserFile       File;
-            public  IBrowserFile       SignatureFile;
             public  SignatureAlgorithm SignatureAlgorithm;
-            private byte[]             _signature;
+            private Signature            _signature;
             private X509Certificate2   _certificate;
-            private bool               _verified = false;
+            private bool               _wasVerified = false;
 
             public bool VerificationResult;
 
             public bool IsSigned   => _signature != null;
-            public bool WasVerified => _verified;
+            public bool WasVerified => _wasVerified;
 
             private BrowserVerifiableFile() {
             }
 
-            public BrowserVerifiableFile(IBrowserFile file, X509Certificate2 certificate = null, byte[] signature = null, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
+            public BrowserVerifiableFile(IBrowserFile file, X509Certificate2 certificate = null, Signature signature = null, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
                 File               = file;
                 SignatureAlgorithm = algorithm;
                 _certificate       = certificate;
@@ -150,11 +149,11 @@ namespace DigitalSignWebService.Data {
                 }
             }
 
-            public byte[] GetSignature() {
+            public Signature GetSignature() {
                 return _signature;
             }
 
-            public void SetSignature(byte[] signature) {
+            public void SetSignature(Signature signature) {
                 _signature = signature;
             }
 
@@ -167,7 +166,8 @@ namespace DigitalSignWebService.Data {
             }
 
             public void SetVerified(bool verified) {
-                _verified = verified;
+                VerificationResult = verified;
+                _wasVerified          = true;
             }
         }
         
@@ -223,11 +223,11 @@ namespace DigitalSignWebService.Data {
             return JsonSerializer.Serialize(sig);
         }
 
-        public static bool Verify(IBrowserFile file, string expected, X509Certificate2 certificate)
+        public static bool Verify(IBrowserFile file, Signature sig, X509Certificate2 certificate)
         {
             AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(certificate.GetPublicKey());
 
-            Signature sig = JsonSerializer.Deserialize<Signature>(expected);
+            // Signature sig = JsonSerializer.Deserialize<Signature>(expected);
 
             var fileData = ReadFile(file);
 

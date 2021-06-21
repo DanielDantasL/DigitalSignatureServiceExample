@@ -44,7 +44,7 @@
                                 </MudSelect>
                             </MudItem>
                             <MudItem xs="2">
-                                <InputFile id="privateKeyFile" OnChange="@((args) => SignFileWithKey(args, signableFile))" hidden multiple accept=".p8"/>
+                                <InputFile id="privateKeyFile" OnChange="@(async (args) => await SignFileWithKey(args, signableFile))" hidden multiple accept=".p8"/>
                                 <MudButton HtmlTag="label"
                                            Variant="Variant.Filled"
                                            Color="Color.Secondary"
@@ -56,6 +56,7 @@
                                            Variant="Variant.Filled"
                                            Color="Color.Success"
                                            StartIcon="@Icons.Filled.FileDownload"
+                                           Disabled="@(signableFile.IsSigned == false)"
                                            OnClick="@((args) => DownloadSignature(signableFile, SignatureFileName))">
                                     Download
                                 </MudButton>
@@ -83,7 +84,7 @@
         }
     }
 
-    private async void SignFileWithKey(InputFileChangeEventArgs e, CryptoUtils.BrowserSignableFile file) {
+    private async Task SignFileWithKey(InputFileChangeEventArgs e, CryptoUtils.BrowserSignableFile file) {
         var privateKeyBytes = new byte[e.File.Size];
         await e.File.OpenReadStream().ReadAsync(privateKeyBytes, 0, (int) e.File.Size);
 
