@@ -41,14 +41,13 @@ namespace DigitalSignWebService.Data {
         {
             SHA224 = 1,
             SHA256 = 2,
-            SHA384 = 3,
-            SHA512 = 4,
-            RC4 = 5,
+            // SHA384 = 3,
+            // SHA512 = 4,
+            // RC4 = 5,
         }
 
         public interface ISignableFile {
             public byte[] GetFileData();
-            public string GetSignatureAlgorithm();
             public string GetSignature();
             public void   SetSignature(string signature);
             public bool   IsSigned { get; }
@@ -75,7 +74,7 @@ namespace DigitalSignWebService.Data {
             private BrowserSignableFile() {
             }
 
-            public BrowserSignableFile(IBrowserFile file, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
+            public BrowserSignableFile(IBrowserFile file, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA256) {
                 File               = file;
                 SignatureAlgorithm = algorithm;
             }
@@ -88,15 +87,6 @@ namespace DigitalSignWebService.Data {
                 var fileData = new byte[File.Size];
                 File.OpenReadStream().ReadAsync(fileData, 0, (int) File.Size);
                 return fileData;
-            }
-
-            public string GetSignatureAlgorithm() {
-                switch (SignatureAlgorithm) {
-                    case SignatureAlgorithm.SHA512:
-                        return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(SignatureAlgorithm), SignatureAlgorithm, null);
-                }
             }
 
             public string GetSignature() {
@@ -123,7 +113,7 @@ namespace DigitalSignWebService.Data {
             private BrowserVerifiableFile() {
             }
 
-            public BrowserVerifiableFile(IBrowserFile file, X509Certificate2 certificate = null, Signature signature = null, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA512) {
+            public BrowserVerifiableFile(IBrowserFile file, X509Certificate2 certificate = null, Signature signature = null, SignatureAlgorithm algorithm = SignatureAlgorithm.SHA256) {
                 File               = file;
                 SignatureAlgorithm = algorithm;
                 _certificate       = certificate;
@@ -142,7 +132,7 @@ namespace DigitalSignWebService.Data {
 
             public string GetSignatureAlgorithm() {
                 switch (SignatureAlgorithm) {
-                    case SignatureAlgorithm.SHA512:
+                    case SignatureAlgorithm.SHA256:
                         return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(SignatureAlgorithm), SignatureAlgorithm, null);
@@ -181,9 +171,9 @@ namespace DigitalSignWebService.Data {
             switch (algorithm) {
                 case SignatureAlgorithm.SHA224: return PkcsObjectIdentifiers.Sha224WithRsaEncryption.Id;
                 case SignatureAlgorithm.SHA256: return PkcsObjectIdentifiers.Sha256WithRsaEncryption.Id;
-                case SignatureAlgorithm.SHA384: return PkcsObjectIdentifiers.Sha384WithRsaEncryption.Id;
-                case SignatureAlgorithm.SHA512: return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
-                case SignatureAlgorithm.RC4:    return PkcsObjectIdentifiers.rc4.Id;
+                // case SignatureAlgorithm.SHA384: return PkcsObjectIdentifiers.Sha384WithRsaEncryption.Id;
+                // case SignatureAlgorithm.SHA512: return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
+                // case SignatureAlgorithm.RC4:    return PkcsObjectIdentifiers.rc4.Id;
 
                 default: throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
             }
