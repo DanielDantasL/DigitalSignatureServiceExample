@@ -49,8 +49,8 @@ namespace DigitalSignWebService.Data {
         public interface ISignableFile {
             public byte[] GetFileData();
             public string GetSignatureAlgorithm();
-            public byte[] GetSignature();
-            public void   SetSignature(byte[] signature);
+            public string GetSignature();
+            public void   SetSignature(string signature);
             public bool   IsSigned { get; }
         }
 
@@ -69,7 +69,7 @@ namespace DigitalSignWebService.Data {
             public IBrowserFile       File;
             public SignatureAlgorithm SignatureAlgorithm;
 
-            private byte[] _signature = null;
+            private string _signature = null;
             public  bool   IsSigned => _signature != null;
 
             private BrowserSignableFile() {
@@ -99,11 +99,11 @@ namespace DigitalSignWebService.Data {
                 }
             }
 
-            public byte[] GetSignature() {
+            public string GetSignature() {
                 return _signature;
             }
 
-            public void SetSignature(byte[] signature) {
+            public void SetSignature(string signature) {
                 _signature = signature;
             }
         }
@@ -189,7 +189,7 @@ namespace DigitalSignWebService.Data {
             }
         }
 
-        private static byte[] ReadFile(IBrowserFile file)
+        public static byte[] ReadFile(IBrowserFile file)
         {
             var fileData = new byte[file.Size];
             file.OpenReadStream().ReadAsync(fileData, 0, (int)file.Size);
@@ -206,14 +206,8 @@ namespace DigitalSignWebService.Data {
             return certificate;
         }
 
-        public static string SignFile(IBrowserFile file, IBrowserFile priv_pem_key_file, SignatureAlgorithm algorithm)
+        public static string SignFile(IBrowserFile file, AsymmetricKeyParameter privateKey, SignatureAlgorithm algorithm)
         {
-            var priv_pem_key = ReadFile(priv_pem_key_file);
-
-            PemObject pemObject = new PemObject("PRIVATE KEY", priv_pem_key);
-
-            AsymmetricKeyParameter privateKey = PublicKeyFactory.CreateKey(pemObject.Content);
-
             var fileData = ReadFile(file);
 
             var signer = SignerUtilities.GetSigner(GetSignatureAlgorithmId(algorithm));
