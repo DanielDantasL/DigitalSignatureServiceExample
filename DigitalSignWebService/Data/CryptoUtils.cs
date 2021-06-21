@@ -26,15 +26,24 @@ namespace DigitalSignWebService.Data {
         public enum KeySize {
             Bits512  = 512,
             Bits1024 = 1024,
+            Bits2048 = 2048,
         }
 
         public enum AsymmetricKeyGenAlgorithm {
             RSA = 1,
+            // DSA = 2,
+            // DiffieHellman = 3,
+            // ElGamal = 4,
+            // NaccacheStern = 5,
         }
 
         public enum SignatureAlgorithm
         {
-            SHA512 = 1,
+            SHA224 = 1,
+            SHA256 = 2,
+            SHA384 = 3,
+            SHA512 = 4,
+            RC4 = 5,
         }
 
         public interface ISignableFile {
@@ -168,11 +177,14 @@ namespace DigitalSignWebService.Data {
             public string sign { get; set; }
         }
 
-        private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm)
-        {
-            switch (algorithm)
-            {
+        private static string GetSignatureAlgorithmId(SignatureAlgorithm algorithm) {
+            switch (algorithm) {
+                case SignatureAlgorithm.SHA224: return PkcsObjectIdentifiers.Sha224WithRsaEncryption.Id;
+                case SignatureAlgorithm.SHA256: return PkcsObjectIdentifiers.Sha256WithRsaEncryption.Id;
+                case SignatureAlgorithm.SHA384: return PkcsObjectIdentifiers.Sha384WithRsaEncryption.Id;
                 case SignatureAlgorithm.SHA512: return PkcsObjectIdentifiers.Sha512WithRsaEncryption.Id;
+                case SignatureAlgorithm.RC4:    return PkcsObjectIdentifiers.rc4.Id;
+
                 default: throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, null);
             }
         }
@@ -302,20 +314,42 @@ namespace DigitalSignWebService.Data {
         private static IAsymmetricCipherKeyPairGenerator GetAsymmetricKeyPairGenerator(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, SecureRandom random) {
             IAsymmetricCipherKeyPairGenerator kpGenerator;
 
-            // TODO: support different algorithms
+            random ??= new SecureRandom(new CryptoApiRandomGenerator());
 
             switch (algorithm) {
                 case AsymmetricKeyGenAlgorithm.RSA:
                     kpGenerator = new RsaKeyPairGenerator();
+                    kpGenerator.Init(new KeyGenerationParameters(random, keyStrength));
                     break;
 
-                default: return null;
+                // case AsymmetricKeyGenAlgorithm.DSA: {
+                //     var DSAParaG    = new BigInteger(Base64.Decode("AL0fxOTq10OHFbCf8YldyGembqEu08EDVzxyLL29Zn/t4It661YNol1rnhPIs+cirw+yf9zeCe+KL1IbZ/qIMZM="));
+                //     var DSAParaP    = new BigInteger(Base64.Decode("AM2b/UeQA+ovv3dL05wlDHEKJ+qhnJBsRT5OB9WuyRC830G79y0R8wuq8jyIYWCYcTn1TeqVPWqiTv6oAoiEeOs="));
+                //     var DSAParaQ    = new BigInteger(Base64.Decode("AIlJT7mcKL6SUBMmvm24zX1EvjNx"));
+                //     // var DSAPublicY  = new BigInteger(Base64.Decode("TtWy2GuT9yGBWOHi1/EpCDa/bWJCk2+yAdr56rAcqP0eHGkMnA9s9GJD2nGU8sFjNHm55swpn6JQb8q0agrCfw=="));
+                //     // var DsaPrivateX = new BigInteger(Base64.Decode("MMpBAxNlv7eYfxLTZ2BItJeD31A="));
+                //
+                //     kpGenerator = new DsaKeyPairGenerator();
+                //     kpGenerator.Init(new DsaKeyGenerationParameters(random, new DsaParameters(DSAParaP, DSAParaQ, DSAParaG)));
+                //     break;
+                // }
+                //
+                // case AsymmetricKeyGenAlgorithm.DiffieHellman: {
+                //     kpGenerator = new DHKeyPairGenerator();
+                //     break;
+                // }
+                // case AsymmetricKeyGenAlgorithm.ElGamal: {
+                //     kpGenerator = new ElGamalKeyPairGenerator();
+                //     break;
+                // }
+                // case AsymmetricKeyGenAlgorithm.NaccacheStern: {
+                //     kpGenerator = new NaccacheSternKeyPairGenerator();
+                //     break;
+                // }
+                
+                default: throw new ArgumentOutOfRangeException();
             }
 
-            random ??= new SecureRandom(new CryptoApiRandomGenerator());
-            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
-
-            kpGenerator.Init(keyGenerationParameters);
             return kpGenerator;
         }
 
