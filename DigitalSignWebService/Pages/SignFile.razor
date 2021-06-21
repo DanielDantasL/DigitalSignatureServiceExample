@@ -56,8 +56,7 @@
                                            Variant="Variant.Filled"
                                            Color="Color.Success"
                                            StartIcon="@Icons.Filled.FileDownload"
-                                           Disabled="@(string.IsNullOrEmpty(signableFile.GetSignature()))"
-                                           OnClick="@() => DownloadSignature(signableFile, SignatureFileName)">
+                                           OnClick="@((args) => DownloadSignature(signableFile, SignatureFileName))">
                                     Download
                                 </MudButton>
                             </MudItem>
@@ -101,10 +100,10 @@
     }
 
     private void DownloadSignature(CryptoUtils.BrowserSignableFile file, string fileName) {
-        if (string.IsNullOrEmpty(file.GetSignature())) {
+        if (file.IsSigned == false) {
             return;
         }
 
-        // BlazorDownloadFileService.DownloadFileFromText(fileName, GetPrivateKey(_privateKeyInfo), contentType: "application/x-pem-file", encoderShouldEmitUTF8Identifier: true);
+        BlazorDownloadFileService.DownloadFileFromText(fileName, file.GetSignature(), contentType: "application/json", encoderShouldEmitUTF8Identifier: false);
     }
 }
