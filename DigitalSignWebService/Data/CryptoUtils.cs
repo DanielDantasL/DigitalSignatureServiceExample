@@ -61,7 +61,6 @@ namespace DigitalSignWebService.Data {
             public X509Certificate2 GetCertificate();
             public void             SetCertificate(X509Certificate2 cert);
             public void             SetVerified(bool                verified);
-            public bool             WasVerified { get; }
         }
 
         public class BrowserSignableFile : ISignableFile {
@@ -103,12 +102,11 @@ namespace DigitalSignWebService.Data {
             public  SignatureAlgorithm SignatureAlgorithm;
             private Signature            _signature;
             private X509Certificate2   _certificate;
-            private bool               _wasVerified = false;
 
             public bool VerificationResult;
 
             public bool IsSigned   => _signature != null;
-            public bool WasVerified => _wasVerified;
+            public bool WasVerified;
 
             private BrowserVerifiableFile() {
             }
@@ -157,7 +155,7 @@ namespace DigitalSignWebService.Data {
 
             public void SetVerified(bool verified) {
                 VerificationResult = verified;
-                _wasVerified          = true;
+                WasVerified        = true;
             }
         }
         
@@ -215,9 +213,7 @@ namespace DigitalSignWebService.Data {
 
         public static bool Verify(IBrowserFile file, Signature sig, X509Certificate2 certificate)
         {
-            AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(certificate.GetPublicKey());
-
-            // Signature sig = JsonSerializer.Deserialize<Signature>(expected);
+            var publicKey = DotNetUtilities.GetRsaPublicKey(certificate.GetRSAPublicKey());
 
             var fileData = ReadFile(file);
 
@@ -291,8 +287,13 @@ namespace DigitalSignWebService.Data {
             // Corresponding private key
             privateKeyInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(subjectKeyPair.Private);
 
-            // Merge into X509Certificate2
-            return new X509Certificate2(certificate.GetEncoded());
+            var file = Path.Combine(Path.GetTempPath(), "Octo-" + Guid.NewGuid());
+            try {
+                File.WriteAllBytes(file, certificate.GetEncoded());
+                return new X509Certificate2(file);
+            } finally {
+                File.Delete(file);
+            }
         }
 
         private static IAsymmetricCipherKeyPairGenerator GetAsymmetricKeyPairGenerator(AsymmetricKeyGenAlgorithm algorithm, int keyStrength, SecureRandom random) {

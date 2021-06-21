@@ -61,7 +61,8 @@
                                            Variant="Variant.Filled"
                                            Color=@(verifiableFile.WasVerified ? verifiableFile.VerificationResult ? Color.Success : Color.Error : Color.Primary)
                                            StartIcon=@(verifiableFile.WasVerified ? verifiableFile.VerificationResult ? Icons.Filled.Check : Icons.Filled.Error : Icons.Filled.Search)
-                                           OnClick="@((args) => Verify(verifiableFile))">
+                                           OnClick="@((args) => Verify(verifiableFile))"
+                                           Disabled="(verifiableFile.GetSignature() == null || verifiableFile.GetCertificate() == null)">
                                     @* @(verifiableFile.WasVerified ?"Verify") *@
                                     Verify
                                 </MudButton>
@@ -85,7 +86,7 @@
     }
 
     private void Verify(CryptoUtils.BrowserVerifiableFile file) {
-        file.SetVerified(CryptoUtils.Verify(file.File, file.GetSignature(), file.GetCertificate())); 
+        file.SetVerified(CryptoUtils.Verify(file.File, file.GetSignature(), file.GetCertificate()));
     }
 
     private async Task AttachFileSignature(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
@@ -93,14 +94,20 @@
         await e.File.OpenReadStream().ReadAsync(signatureData, 0, (int) e.File.Size);
 
         file.SetSignature(JsonSerializer.Deserialize<CryptoUtils.Signature>(signatureData));
+
+        // reset verified
+        file.WasVerified = false;
     }
 
     private async Task AttachCertificate(InputFileChangeEventArgs e, CryptoUtils.BrowserVerifiableFile file) {
-    // .cert / .der file
+        // .cert / .der file
         var certFile = e.File;
         var certData = new byte[certFile.Size];
         await e.File.OpenReadStream().ReadAsync(certData, 0, (int) certFile.Size);
 
         file.SetCertificate(new X509Certificate2(certData));
+
+        // reset verified
+        file.WasVerified = false;
     }
 }
