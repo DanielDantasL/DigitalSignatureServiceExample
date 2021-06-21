@@ -1,0 +1,110 @@
+﻿@page "/sign"
+@using Org.BouncyCastle.Crypto
+@using DigitalSignWebService.Data
+@using Org.BouncyCastle.OpenSsl
+@using System.IO
+@using System.Text
+@using BlazorDownloadFile
+@using Org.BouncyCastle.Security
+@using Org.BouncyCastle.Utilities.IO.Pem
+@using PemReader = Org.BouncyCastle.OpenSsl.PemReader
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudText Typo="Typo.h3" GutterBottom="true">Upload and Sign Files</MudText>
+    <MudGrid Class="my-2">
+        <MudItem xs="6" sm="6" md="12">
+            <InputFile id="fileInput" OnChange="UploadFiles" hidden multiple/>
+
+            <MudButton HtmlTag="label"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Filled.CloudUpload"
+                       for="fileInput">
+                Upload Files
+            </MudButton>
+        </MudItem>
+        <MudItem xs="6" sm="6" md="12">
+            @if (files != null) {
+                <MudText Typo="@Typo.h6">@files.Count() File@(files.Count() == 1 ? "" : "s"):</MudText>
+                <MudList>
+                    @foreach (var signableFile in files) {
+                        <MudGrid Class="my-2">
+                            <MudItem xs="3">
+                                <MudListItem Icon="@Icons.Filled.AttachFile" @key="@signableFile">
+                                    @signableFile.File.Name <br>
+                                    (<code>@(signableFile.File.Size / 1024) KBytes</code>)
+                                </MudListItem>
+
+                            </MudItem>
+                            <MudItem xs="2">
+                                <MudSelect Label="Algorithm" @bind-Value="@signableFile.SignatureAlgorithm" Strict="true" Variant="Variant.Outlined" Format="F2">
+                                    @foreach (CryptoUtils.SignatureAlgorithm item in Enum.GetValues(typeof(CryptoUtils.SignatureAlgorithm))) {
+                                        <MudSelectItem Value="@item">@item</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="2">
+                                <InputFile id="privateKeyFile" OnChange="@(async (args) => await SignFileWithKey(args, signableFile))" hidden multiple accept=".p8"/>
+                                <MudButton HtmlTag="label"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Secondary"
+                                           StartIcon="@Icons.Filled.HistoryEdu"
+                                           for="privateKeyFile">
+                                    Sign
+                                </MudButton>
+                                <MudButton HtmlTag="label"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Success"
+                                           StartIcon="@Icons.Filled.FileDownload"
+                                           Disabled="@(signableFile.IsSigned == false)"
+                                           OnClick="@((args) => DownloadSignature(signableFile, SignatureFileName))">
+                                    Download
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    }
+                </MudList>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code
+{
+        private const string SignatureFileName = "signature.json";
+
+    [Inject]
+    IBlazorDownloadFileService BlazorDownloadFileService { get; set; }
+
+    IList<CryptoUtils.BrowserSignableFile> files = new List<CryptoUtils.BrowserSignableFile>();
+
+    private void UploadFiles(InputFileChangeEventArgs e) {
+        foreach (var file in e.GetMultipleFiles()) {
+            files.Add(new CryptoUtils.BrowserSignableFile(file));
+        }
+    }
+
+    private async Task SignFileWithKey(InputFileChangeEventArgs e, CryptoUtils.BrowserSignableFile file) {
+        var privateKeyBytes = new byte[e.File.Size];
+        await e.File.OpenReadStream().ReadAsync(privateKeyBytes, 0, (int) e.File.Size);
+
+        var tr = new StreamReader(new MemoryStream(privateKeyBytes), Encoding.Default);
+        var pr = new PemReader(tr);
+        var privateKey = (AsymmetricKeyParameter) pr.ReadObject();
+
+        pr.Reader.Close();
+        tr.Close();
+
+        var signature = CryptoUtils.SignFile(file.File, privateKey, file.SignatureAlgorithm);
+        Console.WriteLine($"Signature: {signature}");
+        file.SetSignature(signature);
+    }
+
+    private void DownloadSignature(CryptoUtils.BrowserSignableFile file, string fileName) {
+        if (file.IsSigned == false) {
+            return;
+        }
+
+        BlazorDownloadFileService.DownloadFileFromText(fileName, file.GetSignature(), contentType: "application/json", encoderShouldEmitUTF8Identifier: false);
+    }
+}

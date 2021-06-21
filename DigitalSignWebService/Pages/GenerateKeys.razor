@@ -1,0 +1,120 @@
+﻿@page "/genKeys"
+@using BlazorDownloadFile
+@using DigitalSignWebService.Data
+@using System.IO
+@using System.Security.Cryptography.X509Certificates
+@using Org.BouncyCastle.Asn1.Pkcs
+@using Org.BouncyCastle.Utilities.IO.Pem
+@using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter
+
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudText Typo="Typo.h3" GutterBottom="true">Generate Keys</MudText>
+    <MudGrid Class="my-2">
+        <MudItem xs="6" sm="6" md="4">
+            <MudSelect Label="Algorithm" @bind-Value="AsymmetricKeyGenAlgorithm" Strict="true" Variant="Variant.Outlined" Format="F2">
+                @foreach (CryptoUtils.AsymmetricKeyGenAlgorithm item in Enum.GetValues(typeof(CryptoUtils.AsymmetricKeyGenAlgorithm))) {
+                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="6" md="4">
+            <MudSelect Label="Key Size" @bind-Value="KeySize" Strict="true" Variant="Variant.Outlined" Format="F2" ToStringFunc="_keySizeToString">
+                @foreach (CryptoUtils.KeySize item in Enum.GetValues(typeof(CryptoUtils.KeySize))) {
+                    <MudSelectItem Value="@item"></MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="GenerateKeyPair" Class="my-2">Generate Key Pair</MudButton>
+    <MudGrid Class="my-2">
+        <MudItem xs="6">
+            <MudTextField T="string" Label="Public Key" Variant="Variant.Outlined" Text="@PublicKeyText" Lines="6"/>
+            <MudButton
+                Variant="Variant.Filled"
+                Color="Color.Primary"
+                Disabled="@(_certificate == null)"
+                StartIcon="@Icons.Filled.FileDownload"
+                @onclick="() => DownloadCertificate(CertificateFileName)"
+                Class="my-2">
+                Download Certificate
+            </MudButton>
+        </MudItem>
+        <MudItem xs="6">
+            <MudTextField T="string" Label="Private Key" Variant="Variant.Outlined" Text="@PrivateKeyText" Lines="6"/>
+            <MudButton
+                Variant="Variant.Filled"
+                Color="Color.Primary"
+                Disabled="@(_certificate == null)"
+                StartIcon="@Icons.Filled.FileDownload"
+                @onclick="() => DownloadPrivateKey(PrivateKeyFileName)"
+                Class="my-2">
+                Download Private Key
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+        private const string CertificateFileName = "certificate.der";
+        private const string PrivateKeyFileName = "private-key.p8";
+
+    private CryptoUtils.KeySize KeySize { get; set; } = CryptoUtils.KeySize.Bits512;
+    private CryptoUtils.AsymmetricKeyGenAlgorithm AsymmetricKeyGenAlgorithm { get; set; } = CryptoUtils.AsymmetricKeyGenAlgorithm.RSA;
+
+    private string PublicKeyText { get; set; }
+    private string PrivateKeyText { get; set; }
+
+    [Inject]
+    IBlazorDownloadFileService BlazorDownloadFileService { get; set; }
+
+    private X509Certificate2 _certificate;
+    private PrivateKeyInfo _privateKeyInfo;
+
+    private void GenerateKeyPair() {
+        _certificate = CryptoUtils.GenerateSelfSignedCertificate(AsymmetricKeyGenAlgorithm, (int) KeySize, "CN=DigitalSignSampleSubjectName", out _privateKeyInfo);
+        PublicKeyText = GetPublicKey(_certificate);
+        PrivateKeyText = GetPrivateKey(_privateKeyInfo);
+    }
+
+    private void SaveTextInFile(string content, string fileName) {
+        BlazorDownloadFileService.DownloadFileFromText(fileName, content, contentType: "text/plain", encoderShouldEmitUTF8Identifier: false);
+    }
+
+    private void DownloadCertificate(string fileName) {
+        if (_certificate == null) {
+            return;
+        }
+
+        BlazorDownloadFileService.DownloadFile(fileName, _certificate.RawData, contentType: "application/x-x509-ca-cert");
+    }
+
+    private void DownloadPrivateKey(string fileName) {
+        if (_privateKeyInfo == null) {
+            return;
+        }
+
+        BlazorDownloadFileService.DownloadFileFromText(fileName, GetPrivateKey(_privateKeyInfo), contentType: "application/x-pem-file", encoderShouldEmitUTF8Identifier: false);
+    }
+
+    private String GetPrivateKey(PrivateKeyInfo privateKeyInfo) {
+        TextWriter textWriter = new StringWriter();
+        var pemWriter = new PemWriter(textWriter);
+        PemObjectGenerator pemObject = new PemObject("PRIVATE KEY", privateKeyInfo.GetEncoded());
+        pemWriter.WriteObject(pemObject);
+        pemWriter.Writer.Flush();
+        return textWriter.ToString();
+    }
+
+    private String GetPublicKey(X509Certificate2 certificate) {
+        TextWriter textWriter = new StringWriter();
+        var pemWriter = new PemWriter(textWriter);
+        PemObjectGenerator pemObject = new PemObject("PUBLIC KEY", certificate.GetPublicKey());
+        pemWriter.WriteObject(pemObject);
+        pemWriter.Writer.Flush();
+        return textWriter.ToString();
+    }
+
+    private readonly Func<CryptoUtils.KeySize, string> _keySizeToString = ks => $"{(int) ks} Bits";
+
+}

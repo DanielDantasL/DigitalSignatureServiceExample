@@ -1,6 +1,6 @@
 using System;
 
-namespace DigitalSignatureServiceWebApi
+namespace DigitalSignWebService.Data
 {
     public class WeatherForecast
     {
